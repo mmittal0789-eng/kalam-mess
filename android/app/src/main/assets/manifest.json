@@ -1,0 +1,24 @@
+{
+  "name": "Kalam Mess – Digital Pass",
+  "short_name": "KalamMess",
+  "description": "A.P.J. Abdul Kalam Bhawan Digital Mess Pass and Anti-Waste Token System",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070e0a",
+  "theme_color": "#0b3b2c",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

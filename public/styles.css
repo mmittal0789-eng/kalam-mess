@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+:root {
+  /* =================================================== */
+  /* LIGHT THEME (Two-Color Canvas: Warm Cream & Forest) */
+  /* =================================================== */
+  --bg-canvas: #fbf8f2;
+  --bg-surface: #f4efe4;
+  --bg-card: #ffffff;
+  --border-subtle: #e8e1d3;
+  --text-primary: #111a15;
+  --text-secondary: #576860;
+  --text-muted: #7c8e86;
+  
+  /* Widget 1: Profile Photo Card */
+  --widget-profile-bg: linear-gradient(145deg, #0b3b2c 0%, #06231a 100%);
+  --widget-profile-text: #ffffff;
+  --widget-profile-sub: #a7f3d0;
+  --widget-profile-border: #134e3a;
+
+  /* Widget 2: Today Menu Card */
+  --widget-menu-bg: #ffffff;
+  --widget-menu-border: #e8e1d3;
+  --widget-menu-accent-bg: #fdf6e7;
+  --widget-menu-accent-text: #b45309;
+  --widget-menu-accent-badge: #f59e0b;
+
+  /* Widget 3: Slide Bar */
+  --widget-slider-track: #eae5d9;
+  --widget-slider-border: #d8cfc0;
+  --widget-slider-thumb: #0b3b2c;
+  --widget-slider-fill: #10b981;
+  --widget-slider-text: #111a15;
+
+  /* Widget 4: Circular Animated Timer */
+  --widget-timer-bg: #ffffff;
+  --widget-timer-border: #e8e1d3;
+  --widget-timer-ring-bg: #eae5d9;
+  --widget-timer-ring-active: #10b981;
+  --widget-timer-text: #111a15;
+
+  /* Form & UI Elements */
+  --input-bg: #f4efe4;
+  --input-border: #e8e1d3;
+  --btn-primary-bg: #0b3b2c;
+  --btn-primary-text: #ffffff;
+}
+
+.dark {
+  /* =================================================== */
+  /* DARK THEME (Two-Color Canvas: Obsidian & Deep Pine) */
+  /* =================================================== */
+  --bg-canvas: #070e0a;
+  --bg-surface: #0d1a14;
+  --bg-card: #111f18;
+  --border-subtle: #1c3227;
+  --text-primary: #f0fdf4;
+  --text-secondary: #a7b8ae;
+  --text-muted: #6f8277;
+
+  /* Widget 1: Profile Photo Card */
+  --widget-profile-bg: linear-gradient(145deg, #112c21 0%, #091a13 100%);
+  --widget-profile-text: #ffffff;
+  --widget-profile-sub: #34d399;
+  --widget-profile-border: #1a4232;
+
+  /* Widget 2: Today Menu Card */
+  --widget-menu-bg: #111f18;
+  --widget-menu-border: #1c3227;
+  --widget-menu-accent-bg: #1c2717;
+  --widget-menu-accent-text: #fcd34d;
+  --widget-menu-accent-badge: #f59e0b;
+
+  /* Widget 3: Slide Bar */
+  --widget-slider-track: #15251d;
+  --widget-slider-border: #233b2e;
+  --widget-slider-thumb: #34d399;
+  --widget-slider-fill: #059669;
+  --widget-slider-text: #f0fdf4;
+
+  /* Widget 4: Circular Animated Timer */
+  --widget-timer-bg: #111f18;
+  --widget-timer-border: #1c3227;
+  --widget-timer-ring-bg: #1c3227;
+  --widget-timer-ring-active: #34d399;
+  --widget-timer-text: #f0fdf4;
+
+  /* Form & UI Elements */
+  --input-bg: #0d1a14;
+  --input-border: #1c3227;
+  --btn-primary-bg: #10b981;
+  --btn-primary-text: #051d14;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #233b2e;
+}
+
+/* Base Card Styling */
+.km-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 28px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+}
+
+/* Two-Tone Header Area */
+.two-tone-header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Widget 1: Profile Photo Card */
+.profile-widget {
+  background: var(--widget-profile-bg);
+  color: var(--widget-profile-text);
+  border: 1px solid var(--widget-profile-border);
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.25);
+}
+
+.profile-widget::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -40%;
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* Widget 2: Today Menu Card */
+.menu-widget {
+  background-color: var(--widget-menu-bg);
+  border: 1px solid var(--widget-menu-border);
+  border-radius: 28px;
+}
+
+.menu-accent-box {
+  background-color: var(--widget-menu-accent-bg);
+  color: var(--widget-menu-accent-text);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Widget 3: Slide Bar */
+.slider-widget {
+  background-color: var(--widget-slider-track);
+  border: 2px solid var(--widget-slider-border);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  touch-action: none;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.slider-thumb-btn {
+  background-color: var(--widget-slider-thumb);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.08s ease-out;
+}
+
+.slider-fill-bar {
+  background-color: var(--widget-slider-fill);
+}
+
+.slider-label-text {
+  color: var(--widget-slider-text);
+}
+
+/* Widget 4: Circular Timer Widget */
+.timer-widget {
+  background-color: var(--widget-timer-bg);
+  border: 1px solid var(--widget-timer-border);
+  border-radius: 36px;
+  box-shadow: 0 8px 28px -4px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.timer-circle-progress {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.8s ease;
+}
+
+.timer-text-main {
+  color: var(--widget-timer-text);
+}
+
+/* Animation Pulse for Timer */
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0)); }
+  50% { transform: scale(1.02); filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.35)); }
+}
+
+.animate-timer-pulse {
+  animation: timerPulse 3s ease-in-out infinite;
+}
+
+/* Shimmer Bar for verification */
+.shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.85) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Options Drawer Dropdown */
+.options-menu {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.35);
+  animation: menuDrop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes menuDrop {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Primary Button Styling */
+.btn-primary-action {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  font-weight: 800;
+  border-radius: 9999px;
+  box-shadow: 0 6px 18px rgba(11, 59, 44, 0.25);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark .btn-primary-action {
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25);
+}
+
+.btn-primary-action:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary-action:active {
+  transform: scale(0.98);
+}
+
+/* Common Form Input in Both Themes */
+.form-input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  border-radius: 16px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
