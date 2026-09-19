@@ -12,10 +12,13 @@ echo.
 
 where git >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [!] Git is not yet recognized in this terminal.
-    echo If Git was just installed, please close this window and run it again.
-    pause
-    exit /b
+    if exist "%~dp0git_portable\cmd\git.exe" (
+        set "PATH=%~dp0git_portable\cmd;%PATH%"
+    ) else (
+        echo [!] Git not found.
+        pause
+        exit /b
+    )
 )
 
 if not exist .git (
