@@ -8,7 +8,7 @@ const os = require('os');
 
 const db = require('./database');
 const { getMealSlot, getTodayDateString } = require('./slots');
-const { sendOtpEmail, initTransporter, testSmtpConnection } = require('./mailer');
+const { sendOtpEmail, initTransporter, testSmtpConnection, getLastDispatchInfo } = require('./mailer');
 const { getMenuForDayFromDb, getAllWeeklyMenuFromDb, getDayName, DAYS } = require('./menu');
 
 const app = express();
@@ -739,6 +739,21 @@ app.post('/api/admin/unlock-photo', (req, res) => {
   db.run(`UPDATE users SET photo_locked = 0 WHERE id = ?`, [user_id], function (err) {
     if (err) return res.status(500).json({ error: 'Failed to unlock photo.' });
     res.json({ success: true, message: 'Photo unlocked. Student can now upload a new photo.' });
+  });
+});
+
+// Admin Diagnostic: Check live email health and last dispatch details
+app.get('/api/admin/email-status', async (req, res) => {
+  const isConfigured = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+  const testResult = await testSmtpConnection();
+  const lastDispatch = getLastDispatchInfo();
+
+  res.json({
+    smtp_configured: isConfigured,
+    smtp_user: process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(.{3})(.*)(@.*)/, '$1***$3') : null,
+    connection_test: testResult,
+    last_dispatch: lastDispatch,
+    timestamp: new Date().toISOString()
   });
 });
 

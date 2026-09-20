@@ -38,8 +38,16 @@ function initTransporter() {
 
 initTransporter();
 
+let lastDispatchInfo = {
+  timestamp: null,
+  recipient: null,
+  success: false,
+  message: 'No OTPs dispatched yet',
+  error: null
+};
+
 async function sendOtpEmail(toEmail, otp) {
-  const subject = `Your Digital Mess Card OTP: ${otp}`;
+  const subject = `Your Kalam Mess Verification Code: ${otp}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #f8fafc;">
       <div style="text-align: center; margin-bottom: 20px;">
@@ -62,35 +70,58 @@ async function sendOtpEmail(toEmail, otp) {
   console.log(`[EMAIL OTP DISPATCH]`);
   console.log(`Recipient: ${toEmail}`);
   console.log(`OTP Code : >>> ${otp} <<<`);
-  console.log(`Status   : ${transporter ? 'Sending via SMTP (' + process.env.SMTP_HOST + ')' : 'Simulated (Dev Mode)'}`);
+  console.log(`Status   : ${transporter ? 'Sending via SMTP (' + (process.env.SMTP_USER || 'active') + ')' : 'No SMTP configured'}`);
   console.log(`======================================\n`);
 
   if (transporter) {
     try {
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: `"Kalam Mess - MANIT Bhopal" <${process.env.SMTP_USER}>`,
         to: toEmail,
-        subject: `Your Kalam Mess Verification Code: ${otp}`,
+        subject,
         text: `Your One-Time Password (OTP) for Kalam Mess Digital Pass is: ${otp}\n\nThis OTP is valid for 10 minutes.\nDo not share this OTP with anyone.\n\nA.P.J. Abdul Kalam Bhawan (Hostel H10-C,D), MANIT Bhopal`,
         html
       });
-      return { sent: true, mode: 'smtp' };
+      lastDispatchInfo = {
+        timestamp: new Date().toISOString(),
+        recipient: toEmail,
+        success: true,
+        message: 'Dispatched and accepted by mail servers',
+        response: info.response,
+        messageId: info.messageId
+      };
+      console.log('[SMTP SUCCESS]:', info.response);
+      return { sent: true, mode: 'smtp', response: info.response };
     } catch (err) {
       console.error('[SMTP ERROR]:', err.message);
-      return { sent: true, mode: 'simulated', warning: err.message };
+      lastDispatchInfo = {
+        timestamp: new Date().toISOString(),
+        recipient: toEmail,
+        success: false,
+        message: 'Failed to send via SMTP',
+        error: err.message
+      };
+      return { sent: false, mode: 'error', error: err.message };
     }
   }
 
-  return { sent: true, mode: 'simulated' };
+  lastDispatchInfo = {
+    timestamp: new Date().toISOString(),
+    recipient: toEmail,
+    success: false,
+    message: 'SMTP credentials not configured in environment',
+    error: 'Missing SMTP_USER or SMTP_PASS'
+  };
+  return { sent: false, mode: 'unconfigured' };
 }
 
 async function testSmtpConnection() {
   if (!transporter) {
-    return { configured: false, message: 'SMTP credentials not configured. Currently in Simulation mode.' };
+    return { configured: false, message: 'SMTP credentials not configured in environment variables.' };
   }
   try {
     await transporter.verify();
-    return { configured: true, ok: true, message: 'SMTP connection verified successfully!' };
+    return { configured: true, ok: true, message: 'SMTP connection verified successfully with Google mail servers!' };
   } catch (err) {
     return { configured: true, ok: false, error: err.message };
   }
@@ -99,6 +130,7 @@ async function testSmtpConnection() {
 module.exports = {
   sendOtpEmail,
   initTransporter,
-  testSmtpConnection
+  testSmtpConnection,
+  getLastDispatchInfo: () => lastDispatchInfo
 };
 
