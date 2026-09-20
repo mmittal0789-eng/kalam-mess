@@ -3,16 +3,33 @@ const nodemailer = require('nodemailer');
 let transporter = null;
 
 function initTransporter() {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (user && pass) {
+    const isGmail = user.includes('@gmail.com') || (process.env.SMTP_HOST && process.env.SMTP_HOST.includes('gmail'));
+    
+    if (isGmail) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        auth: { user, pass },
+        connectionTimeout: 6000,
+        greetingTimeout: 6000,
+        socketTimeout: 8000
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+        pool: true,
+        auth: { user, pass },
+        connectionTimeout: 6000
+      });
+    }
     return true;
   }
   transporter = null;

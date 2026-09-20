@@ -104,11 +104,14 @@ app.post('/api/auth/request-otp', (req, res) => {
           return res.status(400).json({ error: 'This email is already registered with a different Scholar Number.' });
         }
 
-        const emailResult = await sendOtpEmail(cleanEmail, otp);
+        // Trigger email dispatch in background for lightning-fast UI response
+        sendOtpEmail(cleanEmail, otp).catch((mailErr) => {
+          console.error('[BACKGROUND EMAIL ERROR]:', mailErr.message);
+        });
+
         return res.json({
           success: true,
-          message: `OTP sent successfully to ${cleanEmail}. Please check your inbox.`,
-          mode: emailResult.mode
+          message: `OTP sent successfully to ${cleanEmail}. Please check your inbox.`
         });
       });
     }
