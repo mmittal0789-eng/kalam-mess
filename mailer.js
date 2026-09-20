@@ -11,25 +11,23 @@ function initTransporter() {
     
     if (isGmail) {
       transporter = nodemailer.createTransport({
-        service: 'gmail',
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // Direct SSL for immediate handshake without pooling hangs
         auth: { user, pass },
-        connectionTimeout: 20000,
-        greetingTimeout: 15000,
-        socketTimeout: 25000
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
       });
     } else {
       transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '465', 10),
         secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-        pool: true,
         auth: { user, pass },
-        connectionTimeout: 20000,
-        greetingTimeout: 15000,
-        socketTimeout: 25000
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
       });
     }
     return true;
@@ -49,22 +47,26 @@ let lastDispatchInfo = {
 };
 
 async function sendOtpEmail(toEmail, otp) {
-  const subject = `Your Kalam Mess Verification Code: ${otp}`;
+  // Using clean non-impersonation subject and sender name to bypass Google Workspace quarantine
+  const subject = `Kalam Mess Pass - One-Time Login Code`;
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #f8fafc;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #f8fafc;">
       <div style="text-align: center; margin-bottom: 20px;">
-        <span style="font-size: 36px;">🍽️</span>
-        <h2 style="color: #0f172a; margin: 8px 0 0 0; font-size: 20px;">A.P.J. Abdul Kalam Bhawan</h2>
-        <p style="color: #64748b; font-size: 12px; margin: 4px 0 0 0;">Digital Mess Card System</p>
+        <span style="font-size: 38px;">🍽️</span>
+        <h2 style="color: #064e3b; margin: 8px 0 0 0; font-size: 20px; font-weight: 800;">A.P.J. Abdul Kalam Bhawan</h2>
+        <p style="color: #059669; font-size: 13px; margin: 4px 0 0 0; font-weight: 600;">Hostel H10-(C,D) Digital Mess Card</p>
       </div>
-      <p style="color: #334155; font-size: 15px;">Hello,</p>
-      <p style="color: #334155; font-size: 15px;">Use the following One-Time Password (OTP) to log in to your mess card:</p>
-      <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: 8px; text-align: center; padding: 18px; border-radius: 12px; margin: 24px 0; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+      <p style="color: #1e293b; font-size: 15px; margin-bottom: 8px;">Hello Student,</p>
+      <p style="color: #475569; font-size: 14px; line-height: 1.5; margin-top: 0;">Use the one-time verification code below to log in to your mess pass:</p>
+      <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; font-size: 34px; font-weight: 800; letter-spacing: 8px; text-align: center; padding: 18px; border-radius: 12px; margin: 22px 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
         ${otp}
       </div>
-      <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This OTP is valid for 10 minutes. Do not share this code with anyone.</p>
-      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-      <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">A.P.J. Abdul Kalam Bhawan Mess &bull; Single-Token Anti-Waste Protection</p>
+      <p style="color: #475569; font-size: 13px; line-height: 1.5;">This code is valid for <strong>10 minutes</strong>. Do not share it with anyone.</p>
+      <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin: 16px 0; font-size: 12px; color: #065f46;">
+        💡 <strong>Good news:</strong> Once you log in, your pass stays saved on your phone. You will not need to enter an OTP every day!
+      </div>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+      <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">A.P.J. Abdul Kalam Bhawan Mess &bull; Official Digital Token System</p>
     </div>
   `;
 
@@ -78,11 +80,18 @@ async function sendOtpEmail(toEmail, otp) {
   if (transporter) {
     try {
       const info = await transporter.sendMail({
-        from: `"Kalam Mess - MANIT Bhopal" <${process.env.SMTP_USER}>`,
+        from: `"Kalam Hostel Mess" <${process.env.SMTP_USER}>`,
         to: toEmail,
         subject,
-        text: `Your One-Time Password (OTP) for Kalam Mess Digital Pass is: ${otp}\n\nThis OTP is valid for 10 minutes.\nDo not share this OTP with anyone.\n\nA.P.J. Abdul Kalam Bhawan (Hostel H10-C,D), MANIT Bhopal`,
-        html
+        text: `Your One-Time Verification Code for Kalam Mess Pass is: ${otp}\n\nThis code is valid for 10 minutes.\n\nOnce logged in, your pass remains saved on your phone.\n\nA.P.J. Abdul Kalam Bhawan (Hostel H10-C,D) Mess`,
+        html,
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'High',
+          'Auto-Submitted': 'auto-generated',
+          'X-Mailer': 'KalamMessPortal'
+        }
       });
       lastDispatchInfo = {
         timestamp: new Date().toISOString(),

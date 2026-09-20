@@ -218,6 +218,9 @@
       <button onclick="viewMenuEditor()" class="px-5 py-2.5 text-xs font-black km-card hover:bg-black/5 dark:hover:bg-white/10 text-[var(--text-primary)] flex items-center gap-2 transition">
         <i data-lucide="utensils" class="w-4 h-4 text-amber-500"></i> Weekly Mess Menu Editor
       </button>
+      <button onclick="viewStudentOtpDesk()" class="px-5 py-2.5 text-xs font-black bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 rounded-full transition flex items-center gap-2 border border-amber-500/30 active:scale-95 shadow-sm">
+        <i data-lucide="key-round" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i> Student OTP & Fast-Pass Desk
+      </button>
       <button onclick="viewEmailSettings()" class="px-5 py-2.5 text-xs font-black km-card hover:bg-black/5 dark:hover:bg-white/10 text-[var(--text-primary)] flex items-center gap-2 transition">
         <i data-lucide="mail" class="w-4 h-4 text-blue-500"></i> Email / SMTP Config
       </button>
@@ -575,6 +578,78 @@
       </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- STUDENT OTP LOOKUP & FAST-PASS DESK        -->
+    <!-- ========================================== -->
+    <div id="studentOtpDeskSection" class="km-card overflow-hidden hidden space-y-0">
+      <div class="p-5 border-b border-[var(--border-subtle)] flex items-center justify-between two-tone-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center font-black">
+            <i data-lucide="key-round" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-[var(--text-primary)]">Student OTP & Counter Fast-Pass Desk</h3>
+            <p class="text-[11px] text-[var(--text-muted)] font-bold">Instant lookup and pass activation if college email is delayed</p>
+          </div>
+        </div>
+        <button onclick="closeStudentOtpDesk()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-[var(--text-primary)] flex items-center justify-center transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-6">
+        <!-- Direct Instant Pass Activation Form -->
+        <div class="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+          <h4 class="text-xs font-black text-amber-800 dark:text-amber-300 flex items-center gap-2">
+            <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i> Counter Quick-Pass: Instant Activate Student
+          </h4>
+          <p class="text-[11px] text-[var(--text-secondary)] font-semibold">
+            If a student is at the counter and cannot wait for college email delivery, enter their Scholar Number below to activate their pass immediately:
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input type="text" id="deskScholarInput" placeholder="Scholar No (e.g. 26112011312)" maxlength="12" class="px-4 py-3 form-input text-xs font-bold font-mono">
+            <input type="text" id="deskNameInput" placeholder="Student Name (Optional)" class="px-4 py-3 form-input text-xs font-bold">
+            <input type="text" id="deskRoomInput" placeholder="Room No (Optional, e.g. C-204)" class="px-4 py-3 form-input text-xs font-bold">
+          </div>
+          <button onclick="instantActivateFromDesk()" id="btnDeskActivate" class="px-6 py-3.5 btn-primary-action text-xs font-black flex items-center gap-2 active:scale-95 transition">
+            <i data-lucide="check-circle" class="w-4 h-4 stroke-[3]"></i>
+            <span>Instant Activate Pass Now</span>
+          </button>
+          <div id="deskActivateStatus" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+        </div>
+
+        <!-- Live Active OTPs Table -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-black text-[var(--text-primary)] flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-emerald-500"></i> Live Active OTP Requests
+            </h4>
+            <button onclick="loadActiveOtps()" class="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh List
+            </button>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border-subtle)]">
+                <tr>
+                  <th class="p-3">Scholar Number</th>
+                  <th class="p-3">Email (@stu.manit.ac.in)</th>
+                  <th class="p-3 text-center">Active OTP</th>
+                  <th class="p-3 text-center">Expires In</th>
+                  <th class="p-3 text-right">Quick Action</th>
+                </tr>
+              </thead>
+              <tbody id="activeOtpsTableBody" class="divide-y divide-[var(--border-subtle)] font-bold">
+                <tr>
+                  <td colspan="5" class="p-4 text-center text-[var(--text-muted)]">Loading active OTPs...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 <script>
@@ -852,6 +927,7 @@ async function filterLog(slot) {
   document.getElementById('weeklyMenuSection').classList.add('hidden');
   document.getElementById('photoRequestsSection').classList.add('hidden');
   document.getElementById('emailSettingsSection').classList.add('hidden');
+  document.getElementById('studentOtpDeskSection').classList.add('hidden');
   if (window.lucide) lucide.createIcons();
 }
 
@@ -882,6 +958,7 @@ async function viewStudents() {
   document.getElementById('weeklyMenuSection').classList.add('hidden');
   document.getElementById('photoRequestsSection').classList.add('hidden');
   document.getElementById('emailSettingsSection').classList.add('hidden');
+  document.getElementById('studentOtpDeskSection').classList.add('hidden');
 }
 
 function closeStudents() {
@@ -967,6 +1044,7 @@ async function viewPhotoRequests() {
   document.getElementById('studentsSection').classList.add('hidden');
   document.getElementById('weeklyMenuSection').classList.add('hidden');
   document.getElementById('emailSettingsSection').classList.add('hidden');
+  document.getElementById('studentOtpDeskSection').classList.add('hidden');
   if (window.lucide) lucide.createIcons();
 }
 
@@ -1027,6 +1105,7 @@ async function viewMenuEditor() {
     document.getElementById('claimsLogSection').classList.add('hidden');
     document.getElementById('studentsSection').classList.add('hidden');
     document.getElementById('emailSettingsSection').classList.add('hidden');
+    document.getElementById('studentOtpDeskSection').classList.add('hidden');
     if (window.lucide) lucide.createIcons();
   } catch (err) {
     alert('Failed to load menu: ' + err.message);
@@ -1090,6 +1169,7 @@ async function viewEmailSettings() {
     document.getElementById('photoRequestsSection').classList.add('hidden');
     document.getElementById('claimsLogSection').classList.add('hidden');
     document.getElementById('studentsSection').classList.add('hidden');
+    document.getElementById('studentOtpDeskSection').classList.add('hidden');
     if (window.lucide) lucide.createIcons();
   } catch (err) {
     alert('Failed to load email settings: ' + err.message);
@@ -1098,6 +1178,120 @@ async function viewEmailSettings() {
 
 function closeEmailSettings() {
   document.getElementById('emailSettingsSection').classList.add('hidden');
+}
+
+// Student OTP Desk & Fast Pass Activation
+async function viewStudentOtpDesk() {
+  document.getElementById('studentOtpDeskSection').classList.remove('hidden');
+  document.getElementById('emailSettingsSection').classList.add('hidden');
+  document.getElementById('weeklyMenuSection').classList.add('hidden');
+  document.getElementById('photoRequestsSection').classList.add('hidden');
+  document.getElementById('claimsLogSection').classList.add('hidden');
+  document.getElementById('studentsSection').classList.add('hidden');
+  if (window.lucide) lucide.createIcons();
+  await loadActiveOtps();
+}
+
+function closeStudentOtpDesk() {
+  document.getElementById('studentOtpDeskSection').classList.add('hidden');
+}
+
+async function loadActiveOtps() {
+  const tbody = document.getElementById('activeOtpsTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-[var(--text-muted)]">Checking active OTP requests...</td></tr>`;
+
+  try {
+    const res = await fetch('/api/admin/active-otps');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load active OTPs');
+
+    if (!data.otps || data.otps.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-[var(--text-muted)] font-medium">No pending OTP requests at the moment. All students are either verified or no active requests.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.otps.map(o => `
+      <tr class="hover:bg-black/5 dark:hover:bg-white/5 transition">
+        <td class="p-3 font-mono font-black text-emerald-600 dark:text-emerald-400">${o.scholar_no}</td>
+        <td class="p-3 text-[var(--text-secondary)] font-mono text-[11px]">${o.email}</td>
+        <td class="p-3 text-center">
+          <span class="inline-block font-mono font-black text-sm tracking-widest px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-sm">
+            ${o.otp}
+          </span>
+        </td>
+        <td class="p-3 text-center text-[var(--text-muted)] font-mono text-[11px]">${o.expires_in_seconds}s</td>
+        <td class="p-3 text-right">
+          <button onclick="instantActivateForScholar('${o.scholar_no}')" class="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black transition active:scale-95 shadow-sm">
+            ⚡ Quick Activate
+          </button>
+        </td>
+      </tr>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500 font-bold">Error loading OTPs: ${err.message}</td></tr>`;
+  }
+}
+
+async function instantActivateFromDesk() {
+  const scholar = document.getElementById('deskScholarInput').value.trim();
+  const name = document.getElementById('deskNameInput').value.trim();
+  const room = document.getElementById('deskRoomInput').value.trim();
+  const statusEl = document.getElementById('deskActivateStatus');
+  const btn = document.getElementById('btnDeskActivate');
+
+  if (!scholar || !/^\d{8,12}$/.test(scholar)) {
+    alert('Please enter a valid 8 to 12 digit Scholar Number.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>Activating Pass...</span>';
+  statusEl.className = 'hidden';
+
+  try {
+    const res = await fetch('/api/admin/instant-activate-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scholar_no: scholar, name, room_no: room })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to activate pass');
+
+    statusEl.className = 'p-3 bg-emerald-500/15 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300';
+    statusEl.innerHTML = `✓ ${data.message} Student can now open their digital pass!`;
+    document.getElementById('deskScholarInput').value = '';
+    document.getElementById('deskNameInput').value = '';
+    document.getElementById('deskRoomInput').value = '';
+    loadActiveOtps();
+    loadStats();
+  } catch (err) {
+    statusEl.className = 'p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400';
+    statusEl.innerHTML = `✗ Error: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 stroke-[3]"></i><span>Instant Activate Pass Now</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+async function instantActivateForScholar(scholarNo) {
+  if (!confirm(`Instant-activate digital mess pass for Scholar Number ${scholarNo}?`)) return;
+  try {
+    const res = await fetch('/api/admin/instant-activate-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scholar_no: scholarNo })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to activate pass');
+    alert(`✅ Success: Pass activated for Scholar No. ${scholarNo}!`);
+    loadActiveOtps();
+    loadStats();
+  } catch (err) {
+    alert(`Error activating pass: ${err.message}`);
+  }
 }
 
 document.getElementById('smtpConfigForm').addEventListener('submit', async (e) => {

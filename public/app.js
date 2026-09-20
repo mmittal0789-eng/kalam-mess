@@ -218,6 +218,7 @@ if (btnRequestOtp) {
       document.getElementById('authStep1').classList.add('hidden');
       document.getElementById('authStep2').classList.remove('hidden');
 
+      startOtpResendCountdown(45);
       showToast('OTP dispatched to your official MANIT mailbox!');
     } catch (err) {
       showToast('Network error requesting OTP. Please check connection.', true);
@@ -229,9 +230,70 @@ if (btnRequestOtp) {
   });
 }
 
+let resendInterval = null;
+function startOtpResendCountdown(seconds = 45) {
+  const btnResend = document.getElementById('btnResendOtp');
+  const timerSpan = document.getElementById('otpTimerSpan');
+  const countdownText = document.getElementById('otpCountdownText');
+  if (!btnResend || !timerSpan) return;
+
+  if (resendInterval) clearInterval(resendInterval);
+  btnResend.disabled = true;
+  if (countdownText) countdownText.classList.remove('hidden');
+
+  let remaining = seconds;
+  timerSpan.textContent = remaining;
+
+  resendInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(resendInterval);
+      btnResend.disabled = false;
+      if (countdownText) countdownText.classList.add('hidden');
+    } else {
+      timerSpan.textContent = remaining;
+    }
+  }, 1000);
+}
+
+const btnResendOtp = document.getElementById('btnResendOtp');
+if (btnResendOtp) {
+  btnResendOtp.addEventListener('click', async () => {
+    const email = document.getElementById('inputEmail').value.trim();
+    const scholar_no = document.getElementById('inputScholar').value.trim();
+    if (!scholar_no) return;
+
+    btnResendOtp.disabled = true;
+    btnResendOtp.textContent = 'Sending...';
+
+    try {
+      const res = await fetch(API_BASE + '/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, scholar_no })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Failed to resend OTP', true);
+        btnResendOtp.disabled = false;
+        btnResendOtp.textContent = 'Resend OTP';
+        return;
+      }
+      showToast('Fresh OTP dispatched to your MANIT inbox!');
+      btnResendOtp.textContent = 'Resend OTP';
+      startOtpResendCountdown(45);
+    } catch (err) {
+      showToast('Network error resending OTP', true);
+      btnResendOtp.disabled = false;
+      btnResendOtp.textContent = 'Resend OTP';
+    }
+  });
+}
+
 const btnBackToStep1 = document.getElementById('btnBackToStep1');
 if (btnBackToStep1) {
   btnBackToStep1.addEventListener('click', () => {
+    if (resendInterval) clearInterval(resendInterval);
     document.getElementById('authStep2').classList.add('hidden');
     document.getElementById('authStep1').classList.remove('hidden');
     initIcons();

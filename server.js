@@ -600,6 +600,83 @@ app.post('/api/admin/email-settings/send-test', async (req, res) => {
   });
 });
 
+// Admin: View active/recent student OTPs for instant counter verification
+app.get('/api/admin/active-otps', (req, res) => {
+  const now = Date.now();
+  db.all(
+    `SELECT email, otp, expires_at FROM otps WHERE expires_at > ? ORDER BY expires_at DESC LIMIT 30`,
+    [now],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Database error fetching active OTPs' });
+      const formatted = (rows || []).map(r => ({
+        email: r.email,
+        scholar_no: r.email.split('@')[0],
+        otp: r.otp,
+        expires_in_seconds: Math.max(0, Math.round((r.expires_at - now) / 1000))
+      }));
+      res.json({ success: true, otps: formatted });
+    }
+  );
+});
+
+// Admin: Instant manual pass activation for student (counter assistant)
+app.post('/api/admin/instant-activate-student', (req, res) => {
+  const { scholar_no, name, room_no, hostel_block } = req.body;
+  const cleanScholar = (scholar_no || '').toString().trim();
+  if (!cleanScholar || !/^\d{8,12}$/.test(cleanScholar)) {
+    return res.status(400).json({ error: 'Valid 8-12 digit MANIT Scholar Number required.' });
+  }
+  const cleanEmail = `${cleanScholar}@stu.manit.ac.in`;
+
+  db.get(`SELECT * FROM users WHERE email = ?`, [cleanEmail], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Database error querying student.' });
+
+    if (user) {
+      db.run(`DELETE FROM otps WHERE email = ?`, [cleanEmail]);
+      return res.json({
+        success: true,
+        message: `Student pass is already active for Scholar No. ${cleanScholar}!`,
+        user: {
+          id: user.id,
+          scholar_no: user.scholar_no,
+          email: user.email,
+          name: user.name,
+          photo_url: user.photo_url,
+          photo_locked: user.photo_locked || 0,
+          isProfileComplete: Boolean(user.photo_url && user.name)
+        }
+      });
+    }
+
+    const studentName = (name || `Student ${cleanScholar}`).trim();
+
+    db.run(
+      `INSERT INTO users (scholar_no, email, name) VALUES (?, ?, ?)`,
+      [cleanScholar, cleanEmail, studentName],
+      function (insertErr) {
+        if (insertErr) {
+          console.error('[DB INSERT ERROR]:', insertErr.message);
+          return res.status(500).json({ error: 'Failed to create student account: ' + insertErr.message });
+        }
+        db.run(`DELETE FROM otps WHERE email = ?`, [cleanEmail]);
+        return res.json({
+          success: true,
+          message: `Student account created & pass activated immediately for Scholar No. ${cleanScholar}!`,
+          user: {
+            id: this.lastID,
+            scholar_no: cleanScholar,
+            email: cleanEmail,
+            name: studentName,
+            photo_url: null,
+            photo_locked: 0,
+            isProfileComplete: false
+          }
+        });
+      }
+    );
+  });
+});
+
 // Admin: Reset a user's claims for today
 app.post('/api/admin/reset-my-token', (req, res) => {
   const { user_id } = req.body;
