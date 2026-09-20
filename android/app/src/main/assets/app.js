@@ -9,7 +9,6 @@ const API_BASE = (window.location.protocol === "file:" || !window.location.host)
 let currentUser = null;
 let currentSlotData = null;
 let currentToken = null;
-let simulatedMinutes = null;
 let liveClockInterval = null;
 let burnCountdownInterval = null;
 let isBurnScreenActive = false;
@@ -146,16 +145,56 @@ function switchView(viewId) {
 }
 
 // ------------------------------------------
+// Real-time MANIT Scholar & Email Format Binding
+// ------------------------------------------
+const inputScholar = document.getElementById('inputScholar');
+const inputEmail = document.getElementById('inputEmail');
+
+if (inputScholar && inputEmail) {
+  const syncEmailFromScholar = () => {
+    // Strictly numeric: strip any letters, special characters, or spaces
+    inputScholar.value = inputScholar.value.replace(/\D/g, '');
+    const scholar = inputScholar.value.trim();
+    if (scholar.length > 0) {
+      inputEmail.value = `${scholar}@stu.manit.ac.in`;
+    } else {
+      inputEmail.value = '';
+    }
+  };
+
+  inputScholar.addEventListener('input', syncEmailFromScholar);
+
+  inputScholar.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const cleaned = pasted.replace(/\D/g, '').slice(0, 12);
+    inputScholar.value = cleaned;
+    if (cleaned.length > 0) {
+      inputEmail.value = `${cleaned}@stu.manit.ac.in`;
+    } else {
+      inputEmail.value = '';
+    }
+  });
+}
+
+// ------------------------------------------
 // Step 1: Request OTP
 // ------------------------------------------
 const btnRequestOtp = document.getElementById('btnRequestOtp');
 if (btnRequestOtp) {
   btnRequestOtp.addEventListener('click', async () => {
-    const email = document.getElementById('inputEmail').value.trim();
-    const scholar_no = document.getElementById('inputScholar').value.trim();
+    const scholar_no = inputScholar ? inputScholar.value.trim() : '';
+    const email = inputEmail ? inputEmail.value.trim() : '';
 
-    if (!email || !scholar_no) {
-      showToast('Please enter both Email and Scholar Number.', true);
+    if (!scholar_no || !/^\d{8,12}$/.test(scholar_no)) {
+      showToast('Please enter your 8 to 12 digit MANIT Scholar Number (e.g. 26112011312).', true);
+      inputScholar?.focus();
+      return;
+    }
+
+    const expectedEmail = `${scholar_no}@stu.manit.ac.in`;
+    if (email !== expectedEmail) {
+      showToast(`Student email must be ${expectedEmail}. Fake IDs are blocked.`, true);
       return;
     }
 
@@ -179,16 +218,9 @@ if (btnRequestOtp) {
       document.getElementById('authStep1').classList.add('hidden');
       document.getElementById('authStep2').classList.remove('hidden');
 
-      if (data.devOtp) {
-        const devBox = document.getElementById('devOtpBox');
-        devBox.innerHTML = `👉 Demo/Local OTP: <span class="font-bold text-amber-900 dark:text-amber-200 text-sm tracking-widest">${data.devOtp}</span> (Auto-filled)`;
-        devBox.classList.remove('hidden');
-        document.getElementById('inputOtp').value = data.devOtp;
-      }
-
-      showToast('OTP sent successfully!');
+      showToast('OTP dispatched to your official MANIT mailbox!');
     } catch (err) {
-      showToast('Network error requesting OTP', true);
+      showToast('Network error requesting OTP. Please check connection.', true);
     } finally {
       btnRequestOtp.disabled = false;
       btnRequestOtp.innerHTML = '<span>Send Verification OTP</span><i data-lucide="arrow-right" class="w-4 h-4"></i>';
@@ -369,8 +401,7 @@ function setupCardProfile(user) {
 async function refreshCardStatus() {
   if (!currentUser) return;
 
-  let url = `${API_BASE}/api/card/status?user_id=${currentUser.id}`;
-  if (simulatedMinutes !== null) url += `&demo_minutes=${simulatedMinutes}`;
+  const url = `${API_BASE}/api/card/status?user_id=${currentUser.id}`;
 
   try {
     const res = await fetch(url);
@@ -529,10 +560,7 @@ const btnClaimToken = document.getElementById('btnClaimToken');
 if (btnClaimToken) {
   btnClaimToken.addEventListener('click', async () => {
     btnClaimToken.disabled = true;
-    const payload = {
-      user_id: currentUser.id,
-      ...(simulatedMinutes !== null ? { demo_minutes: simulatedMinutes } : {})
-    };
+    const payload = { user_id: currentUser.id };
 
     try {
       const res = await fetch(API_BASE + '/api/card/claim-token', {
@@ -636,10 +664,7 @@ if (swipeThumb) {
 async function triggerRedemption() {
   // If token is not yet claimed, claim it first automatically
   if (!currentToken || currentToken.status !== 'CLAIMED') {
-    const payload = {
-      user_id: currentUser.id,
-      ...(simulatedMinutes !== null ? { demo_minutes: simulatedMinutes } : {})
-    };
+    const payload = { user_id: currentUser.id };
     try {
       const res = await fetch(API_BASE + '/api/card/claim-token', {
         method: 'POST',
@@ -764,37 +789,6 @@ function stopLiveClock() {
   if (liveClockInterval) clearInterval(liveClockInterval);
 }
 
-// ------------------------------------------
-// Demo Simulation Controls
-// ------------------------------------------
-document.querySelectorAll('.demo-time-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    simulatedMinutes = parseInt(e.target.dataset.mins, 10);
-    showToast(`Simulated shift: ${e.target.textContent.trim()}`);
-    optionsDropdown?.classList.add('hidden');
-    refreshCardStatus();
-  });
-});
-
-const btnResetMyToken = document.getElementById('btnResetMyToken');
-if (btnResetMyToken) {
-  btnResetMyToken.addEventListener('click', async () => {
-    if (!currentUser) return;
-    try {
-      const res = await fetch(API_BASE + '/api/admin/reset-my-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: currentUser.id })
-      });
-      const data = await res.json();
-      showToast(data.message || 'Token reset');
-      optionsDropdown?.classList.add('hidden');
-      refreshCardStatus();
-    } catch (err) {
-      showToast('Failed to reset token', true);
-    }
-  });
-}
 
 // Logout
 const logoutBtn = document.getElementById('logoutBtn');

@@ -44,16 +44,45 @@ app.use(express.static(path.join(__dirname, 'public')));
 // 1. AUTHENTICATION & OTP ENDPOINTS
 // -------------------------------------------------------------
 
+// Strict MANIT student credential validation (Format: <scholar_no>@stu.manit.ac.in)
+function validateManitCredentials(scholar_no, email) {
+  const cleanScholar = (scholar_no || '').toString().trim();
+  const cleanEmail = (email || '').toString().trim().toLowerCase();
+
+  if (!cleanScholar) {
+    return { valid: false, error: 'MANIT Scholar Number is required.' };
+  }
+
+  // Scholar Number must be 8 to 12 digits (e.g. 26112011312)
+  if (!/^\d{8,12}$/.test(cleanScholar)) {
+    return {
+      valid: false,
+      error: 'Invalid Scholar Number. Must be your 8 to 12 digit MANIT Scholar Number (e.g. 26112011312).'
+    };
+  }
+
+  // Official student email must strictly be <scholar_no>@stu.manit.ac.in
+  const expectedEmail = `${cleanScholar}@stu.manit.ac.in`;
+  if (cleanEmail !== expectedEmail) {
+    return {
+      valid: false,
+      error: `Invalid Student ID. For Scholar Number ${cleanScholar}, institutional email must be ${expectedEmail}. No fake IDs or personal emails are allowed.`
+    };
+  }
+
+  return { valid: true, cleanScholar, cleanEmail };
+}
+
 // Step 1: Request OTP
 app.post('/api/auth/request-otp', (req, res) => {
   const { email, scholar_no } = req.body;
 
-  if (!email || !scholar_no) {
-    return res.status(400).json({ error: 'Email and Scholar Number are required.' });
+  const validation = validateManitCredentials(scholar_no, email);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
   }
 
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanScholar = scholar_no.trim().toUpperCase();
+  const { cleanScholar, cleanEmail } = validation;
 
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -78,9 +107,7 @@ app.post('/api/auth/request-otp', (req, res) => {
         const emailResult = await sendOtpEmail(cleanEmail, otp);
         return res.json({
           success: true,
-          message: `OTP sent to ${cleanEmail}`,
-          // In development/test mode, we also include the OTP in the response for zero-hassle testing
-          devOtp: otp,
+          message: `OTP sent successfully to ${cleanEmail}. Please check your inbox.`,
           mode: emailResult.mode
         });
       });
@@ -92,13 +119,17 @@ app.post('/api/auth/request-otp', (req, res) => {
 app.post('/api/auth/verify-otp', (req, res) => {
   const { email, scholar_no, otp } = req.body;
 
-  if (!email || !scholar_no || !otp) {
-    return res.status(400).json({ error: 'Email, Scholar Number, and OTP are required.' });
+  if (!otp) {
+    return res.status(400).json({ error: 'Verification OTP code is required.' });
   }
 
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanScholar = scholar_no.trim().toUpperCase();
-  const cleanOtp = otp.trim();
+  const validation = validateManitCredentials(scholar_no, email);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
+  }
+
+  const { cleanScholar, cleanEmail } = validation;
+  const cleanOtp = otp.toString().trim();
 
   db.get(`SELECT * FROM otps WHERE email = ?`, [cleanEmail], (err, row) => {
     if (err || !row) {
@@ -235,18 +266,17 @@ app.post('/api/user/profile', upload.single('photo'), (req, res) => {
 // 2. MEAL SLOTS & TOKEN LOGIC
 // -------------------------------------------------------------
 
-// Get current slot status and today's claim state for user
+// Get current slot status and today's claim state for user (Production Time)
 app.get('/api/card/status', async (req, res) => {
-  const { user_id, demo_minutes, demo_day } = req.query;
+  const { user_id } = req.query;
 
   if (!user_id) {
     return res.status(400).json({ error: 'user_id is required.' });
   }
 
-  const customMinutes = demo_minutes !== undefined ? parseInt(demo_minutes, 10) : null;
-  const currentSlot = getMealSlot(customMinutes);
+  const currentSlot = getMealSlot();
   const todayDate = getTodayDateString();
-  const dayName = (demo_day || getDayName()).toLowerCase();
+  const dayName = getDayName().toLowerCase();
 
   // Get day menu from database
   const dayMenu = await getMenuForDayFromDb(db, dayName);
@@ -310,18 +340,17 @@ app.get('/api/card/status', async (req, res) => {
   );
 });
 
-// Generate Token for current slot
+// Generate Token for current slot (Production Time)
 app.post('/api/card/claim-token', async (req, res) => {
-  const { user_id, demo_minutes, demo_day } = req.body;
+  const { user_id } = req.body;
 
   if (!user_id) {
     return res.status(400).json({ error: 'user_id is required.' });
   }
 
-  const customMinutes = demo_minutes !== undefined ? parseInt(demo_minutes, 10) : null;
-  const currentSlot = getMealSlot(customMinutes);
+  const currentSlot = getMealSlot();
   const todayDate = getTodayDateString();
-  const dayName = (demo_day || getDayName()).toLowerCase();
+  const dayName = getDayName().toLowerCase();
 
   if (!currentSlot.active) {
     return res.status(400).json({ error: 'No active meal window right now.' });

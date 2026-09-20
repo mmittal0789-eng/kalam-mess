@@ -14,6 +14,8 @@ cloudflared.exe
 # Environment files
 .env.local
 
-# OS files
+# OS and local untracked files
 Thumbs.db
 .DS_Store
+E-Waste/
+Web Service

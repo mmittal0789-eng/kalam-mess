@@ -99,26 +99,6 @@
             <span class="text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px]">ACTIVE</span>
           </div>
 
-          <!-- Simulation / Demo Shift Controls -->
-          <div class="p-2.5 rounded-xl border border-black/5 dark:border-white/10 space-y-1.5">
-            <div class="text-[10px] uppercase font-black tracking-wider text-[var(--text-muted)]">
-              Simulate Meal Shifts
-            </div>
-            <div class="grid grid-cols-3 gap-1">
-              <button class="demo-time-btn py-1.5 px-1 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-emerald-500 hover:text-white text-[10px] font-black text-center text-[var(--text-primary)] transition" data-mins="1050">
-                Snacks
-              </button>
-              <button class="demo-time-btn py-1.5 px-1 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-emerald-500 hover:text-white text-[10px] font-black text-center text-[var(--text-primary)] transition" data-mins="1215">
-                Dinner
-              </button>
-              <button class="demo-time-btn py-1.5 px-1 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-emerald-500 hover:text-white text-[10px] font-black text-center text-[var(--text-primary)] transition" data-mins="900">
-                Closed
-              </button>
-            </div>
-            <button id="btnResetMyToken" class="w-full text-center text-[10px] text-rose-500 dark:text-rose-400 hover:underline font-extrabold pt-1">
-              Reset My Token (Test Again)
-            </button>
-          </div>
 
           <!-- Admin Portal Link -->
           <a href="/admin.html" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition text-[var(--text-primary)]">
@@ -155,21 +135,57 @@
           <p class="text-xs text-[var(--text-secondary)] mt-1 font-bold">Fast, single-swipe pass verification</p>
         </div>
 
-        <!-- Step A: Enter Email & Scholar No -->
+        <!-- Step A: Enter Scholar No & MANIT Student ID -->
         <div id="authStep1" class="space-y-4">
           <div>
-            <label class="block text-xs font-black mb-1.5 uppercase tracking-wider text-[var(--text-primary)]">College Email</label>
-            <div class="relative">
-              <i data-lucide="mail" class="w-4 h-4 absolute left-4 top-4 text-[var(--text-muted)]"></i>
-              <input type="email" id="inputEmail" placeholder="student@college.edu" class="w-full pl-11 pr-4 py-3.5 form-input text-sm font-bold">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
+                MANIT Scholar Number
+              </label>
+              <span class="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Digits Only (e.g. 26112011312)
+              </span>
             </div>
+            <div class="relative">
+              <i data-lucide="hash" class="w-4 h-4 absolute left-4 top-4 text-[var(--text-muted)]"></i>
+              <input 
+                type="tel" 
+                id="inputScholar" 
+                inputmode="numeric" 
+                pattern="[0-9]{8,12}" 
+                maxlength="12" 
+                placeholder="26112011312" 
+                autocomplete="off"
+                class="w-full pl-11 pr-4 py-3.5 form-input text-sm font-mono font-bold tracking-wider text-[var(--text-primary)]"
+              >
+            </div>
+            <p id="scholarFormatHelp" class="text-[11px] text-[var(--text-muted)] font-bold mt-1">
+              Enter your official 8 to 12 digit MANIT Scholar Number
+            </p>
           </div>
 
           <div>
-            <label class="block text-xs font-black mb-1.5 uppercase tracking-wider text-[var(--text-primary)]">Scholar / Roll Number</label>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-black uppercase tracking-wider text-[var(--text-primary)]">
+                Official Student Email
+              </label>
+              <span class="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-2.5 h-2.5"></i> @stu.manit.ac.in
+              </span>
+            </div>
             <div class="relative">
-              <i data-lucide="badge-alert" class="w-4 h-4 absolute left-4 top-4 text-[var(--text-muted)]"></i>
-              <input type="text" id="inputScholar" placeholder="e.g. 211112045" class="w-full pl-11 pr-4 py-3.5 form-input text-sm font-bold uppercase">
+              <i data-lucide="mail" class="w-4 h-4 absolute left-4 top-4 text-[var(--text-muted)]"></i>
+              <input 
+                type="email" 
+                id="inputEmail" 
+                placeholder="26112011312@stu.manit.ac.in" 
+                readonly
+                class="w-full pl-11 pr-4 py-3.5 form-input text-sm font-mono font-bold tracking-wide cursor-not-allowed bg-black/5 dark:bg-white/5 border-emerald-500/30 text-[var(--text-primary)] opacity-90 select-all"
+              >
+            </div>
+            <div id="emailFormatStatus" class="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+              <i data-lucide="lock" class="w-3.5 h-3.5 shrink-0"></i>
+              <span>Locked to official MANIT domain &mdash; prevents fake IDs</span>
             </div>
           </div>
 
@@ -181,11 +197,10 @@
 
         <!-- Step B: Enter 6-digit OTP -->
         <div id="authStep2" class="space-y-4 hidden">
-          <div class="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-            <i data-lucide="info" class="w-4 h-4 shrink-0 text-emerald-600 mt-0.5"></i>
+          <div class="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs text-[var(--text-primary)] flex items-start gap-2.5">
+            <i data-lucide="mail-check" class="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5"></i>
             <div>
-              Enter the 6-digit OTP sent to <span id="sentOtpTarget" class="font-extrabold text-[var(--text-primary)]"></span>
-              <div id="devOtpBox" class="mt-1.5 text-xs text-amber-800 dark:text-amber-300 font-mono font-bold bg-amber-50 dark:bg-amber-950/50 p-2 rounded-xl border border-amber-200 dark:border-amber-800 hidden"></div>
+              Enter the 6-digit OTP sent to your official MANIT mailbox: <span id="sentOtpTarget" class="font-extrabold font-mono text-emerald-700 dark:text-emerald-300"></span>
             </div>
           </div>
 
