@@ -80,6 +80,7 @@ async function sendOtpEmail(toEmail, otp) {
       const resp = await fetch(process.env.EMAIL_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        redirect: 'follow',
         body: JSON.stringify({
           to: toEmail,
           subject: subject,
@@ -89,6 +90,11 @@ async function sendOtpEmail(toEmail, otp) {
         })
       });
       const data = await resp.text();
+      
+      if (!resp.ok || data.includes('You need access') || data.includes('accounts.google.com') || data.includes('drive-logo')) {
+        throw new Error('Google Permission Denied: Set "Who has access" to "Anyone" in your Google Apps Script deployment settings.');
+      }
+
       lastDispatchInfo = {
         timestamp: new Date().toISOString(),
         recipient: toEmail,
@@ -104,7 +110,7 @@ async function sendOtpEmail(toEmail, otp) {
         timestamp: new Date().toISOString(),
         recipient: toEmail,
         success: false,
-        message: 'Failed to send via HTTPS API',
+        message: 'Failed to send via HTTPS API: ' + apiErr.message,
         error: apiErr.message
       };
       // Fall through to SMTP if available
