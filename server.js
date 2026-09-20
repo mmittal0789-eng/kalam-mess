@@ -13,7 +13,8 @@ const { sendOtpEmail, initTransporter, testSmtpConnection, getLastDispatchInfo }
 const { getMenuForDayFromDb, getAllWeeklyMenuFromDb, getDayName, DAYS } = require('./menu');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.ALWAYSDATA_HTTPD_PORT || process.env.PORT || '3000', 10);
+const HOST = process.env.ALWAYSDATA_HTTPD_IP || process.env.IP || '0.0.0.0';
 
 // Ensure uploads folder exists
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
@@ -892,11 +893,11 @@ function getNetworkIP() {
   return 'localhost';
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, HOST, () => {
   const ip = getNetworkIP();
   console.log(`=======================================================`);
   console.log(` 🍽️  KALAM MESS DIGITAL SYSTEM IS LIVE!`);
-  console.log(` Local:       http://localhost:${PORT}`);
+  console.log(` Local:       http://${HOST}:${PORT}`);
   console.log(` Hostel Wi-Fi: http://${ip}:${PORT}`);
   console.log(` Admin Portal: http://${ip}:${PORT}/admin.html`);
   console.log(`=======================================================`);
