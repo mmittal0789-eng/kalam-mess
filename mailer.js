@@ -16,9 +16,9 @@ function initTransporter() {
         maxConnections: 5,
         maxMessages: 100,
         auth: { user, pass },
-        connectionTimeout: 6000,
-        greetingTimeout: 6000,
-        socketTimeout: 8000
+        connectionTimeout: 20000,
+        greetingTimeout: 15000,
+        socketTimeout: 25000
       });
     } else {
       transporter = nodemailer.createTransport({
@@ -27,7 +27,9 @@ function initTransporter() {
         secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
         pool: true,
         auth: { user, pass },
-        connectionTimeout: 6000
+        connectionTimeout: 20000,
+        greetingTimeout: 15000,
+        socketTimeout: 25000
       });
     }
     return true;
@@ -115,15 +117,30 @@ async function sendOtpEmail(toEmail, otp) {
   return { sent: false, mode: 'unconfigured' };
 }
 
+let lastVerifyCache = {
+  result: null,
+  expiresAt: 0
+};
+
 async function testSmtpConnection() {
   if (!transporter) {
     return { configured: false, message: 'SMTP credentials not configured in environment variables.' };
   }
+
+  const now = Date.now();
+  if (lastVerifyCache.result && now < lastVerifyCache.expiresAt) {
+    return lastVerifyCache.result;
+  }
+
   try {
     await transporter.verify();
-    return { configured: true, ok: true, message: 'SMTP connection verified successfully with Google mail servers!' };
+    const result = { configured: true, ok: true, message: 'SMTP connection verified successfully with Google mail servers!' };
+    lastVerifyCache = { result, expiresAt: now + 30000 };
+    return result;
   } catch (err) {
-    return { configured: true, ok: false, error: err.message };
+    const result = { configured: true, ok: false, error: err.message };
+    lastVerifyCache = { result, expiresAt: now + 10000 };
+    return result;
   }
 }
 
