@@ -556,8 +556,22 @@
             <label for="smtpSecure" class="text-[var(--text-secondary)] font-bold">Use SSL (Checked for Port 465, uncheck for Port 587)</label>
           </div>
 
+          <!-- Cloud / Render Free Tier HTTPS API Option -->
+          <div class="p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block font-black text-blue-800 dark:text-blue-300">
+                ⚡ HTTPS Email Webhook URL (Required for Render Free Tier)
+              </label>
+              <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white">Bypasses Port 587 Block</span>
+            </div>
+            <p class="text-[11px] text-[var(--text-secondary)] font-semibold leading-relaxed">
+              Render Free tier blocks outbound SMTP ports (25, 465, 587). Paste your <strong>Google Apps Script Web App URL</strong> below to send OTPs over HTTPS (port 443) in 1 second flat!
+            </p>
+            <input type="url" id="emailApiUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="w-full px-4 py-2.5 form-input text-xs font-mono font-bold">
+          </div>
+
           <button type="submit" id="btnSaveSmtp" class="px-6 py-3.5 btn-primary-action text-xs font-black active:scale-95 transition">
-            Save SMTP Configuration
+            Save Email Configuration
           </button>
         </form>
 
@@ -1147,20 +1161,26 @@ async function viewEmailSettings() {
     document.getElementById('smtpPort').value = data.port || '587';
     document.getElementById('smtpUser').value = data.user || '';
     document.getElementById('smtpSecure').checked = Boolean(data.secure);
+    document.getElementById('emailApiUrl').value = data.email_api_url || '';
 
     const title = document.getElementById('smtpStatusTitle');
     const desc = document.getElementById('smtpStatusDesc');
     const badge = document.getElementById('smtpModeBadge');
 
-    if (data.configured && data.testResult && data.testResult.ok) {
+    if (data.mode === 'HTTPS_API_RELAY') {
+      title.textContent = '⚡ HTTPS Webhook Relay Active (Port 443)';
+      desc.textContent = 'Bypassing Render SMTP port block. Delivering OTPs directly through Google Apps Script in 1s!';
+      badge.textContent = 'HTTPS RELAY ACTIVE';
+      badge.className = 'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+    } else if (data.configured && data.testResult && data.testResult.ok) {
       title.textContent = 'Real Email (SMTP) Connected';
       desc.textContent = `Delivering to student inboxes via ${data.host} (${data.user})`;
       badge.textContent = 'SMTP ACTIVE';
       badge.className = 'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
     } else {
-      title.textContent = 'Simulation Mode (Dev / Local)';
-      desc.textContent = 'OTPs are logged to console & displayed in browser. Enter SMTP credentials to send real emails.';
-      badge.textContent = 'SIMULATION';
+      title.textContent = 'Simulation Mode / Port Blocked';
+      desc.textContent = 'SMTP connection timed out or not configured. If on Render Free tier, paste a Google Apps Script Web App URL below.';
+      badge.textContent = 'ATTENTION';
       badge.className = 'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
     }
 
@@ -1301,6 +1321,7 @@ document.getElementById('smtpConfigForm').addEventListener('submit', async (e) =
   const user = document.getElementById('smtpUser').value.trim();
   const pass = document.getElementById('smtpPass').value.trim();
   const secure = document.getElementById('smtpSecure').checked;
+  const email_api_url = document.getElementById('emailApiUrl').value.trim();
 
   const btn = document.getElementById('btnSaveSmtp');
   btn.disabled = true;
@@ -1310,7 +1331,7 @@ document.getElementById('smtpConfigForm').addEventListener('submit', async (e) =
     const res = await fetch('/api/admin/email-settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host, port, user, pass, secure })
+      body: JSON.stringify({ host, port, user, pass, secure, email_api_url })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to save');

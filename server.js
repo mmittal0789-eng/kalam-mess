@@ -540,38 +540,39 @@ app.post('/api/admin/menu/update', (req, res) => {
 
 // Admin: Get current email / SMTP settings status
 app.get('/api/admin/email-settings', async (req, res) => {
-  const isConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const isConfigured = Boolean((process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) || process.env.EMAIL_API_URL);
   const testRes = await testSmtpConnection();
 
   res.json({
     configured: isConfigured,
-    mode: isConfigured ? 'REAL_EMAIL_SMTP' : 'SIMULATION_MODE',
+    mode: process.env.EMAIL_API_URL ? 'HTTPS_API_RELAY' : (isConfigured ? 'REAL_EMAIL_SMTP' : 'SIMULATION_MODE'),
     host: process.env.SMTP_HOST || '',
     port: process.env.SMTP_PORT || '587',
     user: process.env.SMTP_USER || '',
     secure: process.env.SMTP_SECURE === 'true',
-    testResult: testRes
+    email_api_url: process.env.EMAIL_API_URL || '',
+    testResult: testRes,
+    lastDispatch: getLastDispatchInfo()
   });
 });
 
 // Admin: Update email / SMTP settings dynamically and save to .env
 app.post('/api/admin/email-settings', async (req, res) => {
-  const { host, port, user, pass, secure } = req.body;
+  const { host, port, user, pass, secure, email_api_url } = req.body;
 
-  if (!host || !user || !pass) {
-    return res.status(400).json({ error: 'Host, User email, and Password/App Password are required.' });
+  if (email_api_url) {
+    process.env.EMAIL_API_URL = email_api_url.trim();
   }
-
-  process.env.SMTP_HOST = host.trim();
-  process.env.SMTP_PORT = (port || '587').toString().trim();
-  process.env.SMTP_USER = user.trim();
-  process.env.SMTP_PASS = pass.trim();
-  process.env.SMTP_SECURE = secure ? 'true' : 'false';
+  if (host) process.env.SMTP_HOST = host.trim();
+  if (port) process.env.SMTP_PORT = port.toString().trim();
+  if (user) process.env.SMTP_USER = user.trim();
+  if (pass) process.env.SMTP_PASS = pass.trim();
+  if (secure !== undefined) process.env.SMTP_SECURE = secure ? 'true' : 'false';
 
   initTransporter();
 
   // Save to .env file
-  const envContent = `PORT=${PORT}\nSMTP_HOST=${process.env.SMTP_HOST}\nSMTP_PORT=${process.env.SMTP_PORT}\nSMTP_USER=${process.env.SMTP_USER}\nSMTP_PASS=${process.env.SMTP_PASS}\nSMTP_SECURE=${process.env.SMTP_SECURE}\n`;
+  const envContent = `PORT=${PORT}\nADMIN_PASSWORD=${process.env.ADMIN_PASSWORD || 'KalamAdmin@2026'}\nSMTP_HOST=${process.env.SMTP_HOST || ''}\nSMTP_PORT=${process.env.SMTP_PORT || '587'}\nSMTP_USER=${process.env.SMTP_USER || ''}\nSMTP_PASS=${process.env.SMTP_PASS || ''}\nSMTP_SECURE=${process.env.SMTP_SECURE || 'false'}\nEMAIL_API_URL=${process.env.EMAIL_API_URL || ''}\n`;
   fs.writeFileSync(path.join(__dirname, '.env'), envContent, 'utf8');
 
   const testRes = await testSmtpConnection();

@@ -48,6 +48,7 @@ let lastDispatchInfo = {
 
 async function sendOtpEmail(toEmail, otp) {
   const subject = `Your Digital Mess Card OTP: ${otp}`;
+  const textContent = `Your One-Time Password (OTP) for Kalam Mess Digital Pass is: ${otp}\n\nThis OTP is valid for 10 minutes.\nDo not share this OTP with anyone.\n\nA.P.J. Abdul Kalam Bhawan (Hostel H10-C,D), MANIT Bhopal`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #f8fafc;">
       <div style="text-align: center; margin-bottom: 20px;">
@@ -70,22 +71,61 @@ async function sendOtpEmail(toEmail, otp) {
   console.log(`[EMAIL OTP DISPATCH]`);
   console.log(`Recipient: ${toEmail}`);
   console.log(`OTP Code : >>> ${otp} <<<`);
-  console.log(`Status   : ${transporter ? 'Sending via SMTP (' + (process.env.SMTP_USER || 'active') + ')' : 'Simulated (Dev Mode)'}`);
+  console.log(`Channel  : ${process.env.EMAIL_API_URL ? 'HTTPS Webhook API (Render Port 443)' : (transporter ? 'SMTP (' + (process.env.SMTP_USER || 'active') + ')' : 'Unconfigured')}`);
   console.log(`======================================\n`);
 
+  // Channel 1: HTTPS Webhook API (Used for Render Free Tier where ports 25, 465, 587 are blocked)
+  if (process.env.EMAIL_API_URL) {
+    try {
+      const resp = await fetch(process.env.EMAIL_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: toEmail,
+          subject: subject,
+          text: textContent,
+          html: html,
+          otp: otp
+        })
+      });
+      const data = await resp.text();
+      lastDispatchInfo = {
+        timestamp: new Date().toISOString(),
+        recipient: toEmail,
+        success: true,
+        message: 'Dispatched via HTTPS Email API (Port 443)',
+        response: data.substring(0, 100)
+      };
+      console.log('[HTTPS API SUCCESS]:', data.substring(0, 100));
+      return { sent: true, mode: 'https_api', response: data };
+    } catch (apiErr) {
+      console.error('[HTTPS API ERROR]:', apiErr.message);
+      lastDispatchInfo = {
+        timestamp: new Date().toISOString(),
+        recipient: toEmail,
+        success: false,
+        message: 'Failed to send via HTTPS API',
+        error: apiErr.message
+      };
+      // Fall through to SMTP if available
+    }
+  }
+
+  // Channel 2: Direct SMTP (Works on local laptop / hostel Wi-Fi, or paid cloud instances)
   if (transporter) {
     try {
       const info = await transporter.sendMail({
         from: `"Mess Digital Card" <${process.env.SMTP_USER}>`,
         to: toEmail,
         subject,
+        text: textContent,
         html
       });
       lastDispatchInfo = {
         timestamp: new Date().toISOString(),
         recipient: toEmail,
         success: true,
-        message: 'Dispatched successfully',
+        message: 'Dispatched successfully via SMTP',
         response: info.response,
         messageId: info.messageId
       };
@@ -97,17 +137,20 @@ async function sendOtpEmail(toEmail, otp) {
         timestamp: new Date().toISOString(),
         recipient: toEmail,
         success: false,
-        message: 'Failed to send via SMTP',
+        message: 'Failed to send via SMTP: ' + err.message,
         error: err.message
       };
       return { sent: false, mode: 'error', error: err.message };
     }
   }
 
-  return { sent: true, mode: 'simulated' };
+  return { sent: false, mode: 'unconfigured' };
 }
 
 async function testSmtpConnection() {
+  if (process.env.EMAIL_API_URL) {
+    return { configured: true, ok: true, message: 'HTTPS Email API configured (Port 443, Render compatible)!' };
+  }
   if (!transporter) {
     return { configured: false, message: 'SMTP credentials not configured.' };
   }
