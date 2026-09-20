@@ -68,9 +68,10 @@ async function sendOtpEmail(toEmail, otp) {
   if (transporter) {
     try {
       await transporter.sendMail({
-        from: `"Mess Digital Card" <${process.env.SMTP_USER}>`,
+        from: `"Kalam Mess - MANIT Bhopal" <${process.env.SMTP_USER}>`,
         to: toEmail,
-        subject,
+        subject: `Your Kalam Mess Verification Code: ${otp}`,
+        text: `Your One-Time Password (OTP) for Kalam Mess Digital Pass is: ${otp}\n\nThis OTP is valid for 10 minutes.\nDo not share this OTP with anyone.\n\nA.P.J. Abdul Kalam Bhawan (Hostel H10-C,D), MANIT Bhopal`,
         html
       });
       return { sent: true, mode: 'smtp' };
