@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 
 const db = require('./database');
 const { getMealSlot, getTodayDateString } = require('./slots');
@@ -430,8 +431,52 @@ app.post('/api/card/burn-token', (req, res) => {
 });
 
 // -------------------------------------------------------------
-// 3. ADMIN DASHBOARD API
+// 3. ADMIN DASHBOARD API (PASSWORD & SESSION PROTECTED)
 // -------------------------------------------------------------
+
+const adminSessions = new Map();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'KalamAdmin@2026';
+
+// Admin: Login with Master Password
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Incorrect Admin Master Password.' });
+  }
+
+  // Generate 24-hour secure random session token
+  const token = crypto.randomBytes(32).toString('hex');
+  adminSessions.set(token, Date.now() + 24 * 60 * 60 * 1000);
+
+  return res.json({
+    success: true,
+    token,
+    message: 'Admin authentication successful.'
+  });
+});
+
+// Middleware: Require Admin Authentication on all admin endpoints
+function requireAdminAuth(req, res, next) {
+  const token = req.headers['x-admin-token'] || (req.headers.authorization && req.headers.authorization.replace('Bearer ', ''));
+
+  if (!token || !adminSessions.has(token)) {
+    return res.status(401).json({ error: 'Access Denied: Admin authorization required.' });
+  }
+
+  const expiresAt = adminSessions.get(token);
+  if (Date.now() > expiresAt) {
+    adminSessions.delete(token);
+    return res.status(401).json({ error: 'Admin session expired. Please log in again.' });
+  }
+
+  next();
+}
+
+// Enforce admin auth on all /api/admin routes (except login)
+app.use('/api/admin', (req, res, next) => {
+  if (req.path === '/login') return next();
+  return requireAdminAuth(req, res, next);
+});
 
 // Admin: Set today's special item
 app.post('/api/admin/set-item', (req, res) => {

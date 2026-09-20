@@ -51,16 +51,81 @@
           LIVE MONITORING
         </span>
 
-        <!-- Return to Student Pass -->
-        <a href="/" class="text-xs font-black text-[#06231a] hover:bg-[#a7f3d0] px-4 py-2 bg-white rounded-full transition shadow-sm flex items-center gap-1.5">
-          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-          <span>Student App</span>
-        </a>
+        <!-- Admin Logout / Lock Button -->
+        <button id="btnAdminLogout" title="Lock & Logout Admin" class="hidden text-xs font-black text-rose-200 hover:text-white px-4 py-2 bg-rose-500/25 hover:bg-rose-600 rounded-full transition shadow-sm border border-rose-500/40 flex items-center gap-1.5 active:scale-95">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>Lock / Logout</span>
+        </button>
       </div>
     </div>
   </nav>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <!-- ========================================== -->
+  <!-- ADMIN AUTHENTICATION GATE (LOCK SCREEN)    -->
+  <!-- ========================================== -->
+  <div id="adminLoginOverlay" class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md km-card p-6 sm:p-8 space-y-6 border border-emerald-500/30 shadow-2xl relative overflow-hidden bg-[var(--bg-card)]">
+      <div class="text-center space-y-2">
+        <div class="inline-flex w-16 h-16 rounded-3xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 items-center justify-center shadow-inner border border-emerald-500/30">
+          <i data-lucide="shield-alert" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-xl font-black tracking-tight text-[var(--text-primary)]">
+          Kalam Mess Operations Portal
+        </h2>
+        <p class="text-xs text-[var(--text-muted)] font-bold">
+          Restricted Area &bull; Hostel Authority Access Only
+        </p>
+      </div>
+
+      <div class="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-[11px] text-rose-700 dark:text-rose-300 font-bold flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-4 h-4 shrink-0"></i>
+        <span>Protected Area. Student access is strictly restricted.</span>
+      </div>
+
+      <form id="formAdminLogin" class="space-y-4" onsubmit="handleAdminLoginSubmit(event)">
+        <div>
+          <label class="block text-xs font-black uppercase tracking-wider text-[var(--text-primary)] mb-1.5">
+            Admin Master Password
+          </label>
+          <div class="relative">
+            <i data-lucide="key" class="w-4 h-4 absolute left-4 top-4 text-[var(--text-muted)]"></i>
+            <input 
+              type="password" 
+              id="adminPasswordInput" 
+              placeholder="Enter Master Password"
+              autocomplete="current-password"
+              required
+              class="w-full pl-11 pr-11 py-3.5 form-input text-sm font-bold tracking-wider"
+            >
+            <button 
+              type="button" 
+              onclick="togglePasswordVisibility()" 
+              class="absolute right-3.5 top-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5"
+            >
+              <i id="eyeIcon" data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="adminLoginError" class="hidden p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 text-center">
+        </div>
+
+        <button 
+          type="submit" 
+          id="btnSubmitAdminLogin" 
+          class="w-full py-4 btn-primary-action text-sm font-black active:scale-98 transition flex items-center justify-center gap-2"
+        >
+          <i data-lucide="unlock" class="w-4 h-4 stroke-[3]"></i>
+          <span>Unlock Admin Console</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MAIN ADMIN DASHBOARD (LOCKED BY DEFAULT)   -->
+  <!-- ========================================== -->
+  <div id="adminDashboardContent" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
     <!-- ========================================== -->
     <!-- HEADER ROW: DATE + SCHEDULED ITEM          -->
@@ -514,6 +579,117 @@
 
 <script>
 let refreshInterval = null;
+
+// ==========================================
+// ADMIN AUTHENTICATION INTERCEPTOR & GATE
+// ==========================================
+const originalFetch = window.fetch;
+window.fetch = function (url, options = {}) {
+  options = options || {};
+  options.headers = options.headers || {};
+  const token = sessionStorage.getItem('kalam_admin_token');
+
+  if (token) {
+    if (options.headers instanceof Headers) {
+      options.headers.set('x-admin-token', token);
+    } else {
+      options.headers['x-admin-token'] = token;
+    }
+  }
+
+  return originalFetch(url, options).then((res) => {
+    if (res.status === 401 && !url.includes('/api/admin/login')) {
+      sessionStorage.removeItem('kalam_admin_token');
+      showLoginOverlay();
+    }
+    return res;
+  });
+};
+
+function togglePasswordVisibility() {
+  const input = document.getElementById('adminPasswordInput');
+  const eye = document.getElementById('eyeIcon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    eye.setAttribute('data-lucide', 'eye-off');
+  } else {
+    input.type = 'password';
+    eye.setAttribute('data-lucide', 'eye');
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+async function handleAdminLoginSubmit(e) {
+  e.preventDefault();
+  const password = document.getElementById('adminPasswordInput').value;
+  const errBox = document.getElementById('adminLoginError');
+  const btn = document.getElementById('btnSubmitAdminLogin');
+
+  errBox.classList.add('hidden');
+  btn.disabled = true;
+  btn.innerHTML = '<span>Verifying Credentials...</span>';
+
+  try {
+    const res = await originalFetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errBox.textContent = data.error || 'Incorrect Admin Master Password';
+      errBox.classList.remove('hidden');
+      return;
+    }
+
+    sessionStorage.setItem('kalam_admin_token', data.token);
+    hideLoginOverlay();
+    initAdminApp();
+  } catch (err) {
+    errBox.textContent = 'Connection error. Please try again.';
+    errBox.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="unlock" class="w-4 h-4 stroke-[3]"></i><span>Unlock Admin Console</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function showLoginOverlay() {
+  document.getElementById('adminLoginOverlay').classList.remove('hidden');
+  document.getElementById('adminDashboardContent').classList.add('hidden');
+  const btnLogout = document.getElementById('btnAdminLogout');
+  if (btnLogout) btnLogout.classList.add('hidden');
+  if (refreshInterval) clearInterval(refreshInterval);
+  if (window.lucide) lucide.createIcons();
+}
+
+function hideLoginOverlay() {
+  document.getElementById('adminLoginOverlay').classList.add('hidden');
+  document.getElementById('adminDashboardContent').classList.remove('hidden');
+  const btnLogout = document.getElementById('btnAdminLogout');
+  if (btnLogout) btnLogout.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+const btnAdminLogout = document.getElementById('btnAdminLogout');
+if (btnAdminLogout) {
+  btnAdminLogout.addEventListener('click', () => {
+    sessionStorage.removeItem('kalam_admin_token');
+    showLoginOverlay();
+  });
+}
+
+function checkAdminAuthOnLoad() {
+  const token = sessionStorage.getItem('kalam_admin_token');
+  if (!token) {
+    showLoginOverlay();
+  } else {
+    hideLoginOverlay();
+    initAdminApp();
+  }
+}
 
 // Admin Theme Toggle
 function updateAdminThemeUI(isDark) {
@@ -992,16 +1168,21 @@ async function sendTestOtpEmail() {
 }
 
 // Initialization
-window.addEventListener('DOMContentLoaded', () => {
-  if (window.lucide) lucide.createIcons();
-  const isDark = document.documentElement.classList.contains('dark');
-  updateAdminThemeUI(isDark);
+function initAdminApp() {
   loadStats();
   loadPhotoRequestBadge();
+  if (refreshInterval) clearInterval(refreshInterval);
   refreshInterval = setInterval(() => {
     loadStats();
     loadPhotoRequestBadge();
   }, 5000);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+  const isDark = document.documentElement.classList.contains('dark');
+  updateAdminThemeUI(isDark);
+  checkAdminAuthOnLoad();
 });
 </script>
 
