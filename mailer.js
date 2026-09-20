@@ -7,26 +7,29 @@ function initTransporter() {
   const pass = process.env.SMTP_PASS;
 
   if (user && pass) {
-    // Use Gmail service shorthand — nodemailer handles host/port/TLS automatically
-    // Pool keeps a persistent warm connection so subsequent sends are instant
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 50,
-      auth: { user, pass },
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 10000
-    });
-
-    // Pre-warm: open the SMTP connection NOW so the first OTP doesn't pay the handshake cost
-    transporter.verify().then(() => {
-      console.log('[SMTP] Connection pre-warmed and ready for instant dispatch');
-    }).catch(err => {
-      console.error('[SMTP] Pre-warm failed (will retry on first send):', err.message);
-    });
-
+    const isGmail = user.includes('@gmail.com') || (process.env.SMTP_HOST && process.env.SMTP_HOST.includes('gmail'));
+    
+    if (isGmail) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        auth: { user, pass },
+        connectionTimeout: 6000,
+        greetingTimeout: 6000,
+        socketTimeout: 8000
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+        pool: true,
+        auth: { user, pass },
+        connectionTimeout: 6000
+      });
+    }
     return true;
   }
   transporter = null;
@@ -44,51 +47,50 @@ let lastDispatchInfo = {
 };
 
 async function sendOtpEmail(toEmail, otp) {
-  const startTime = Date.now();
+  const subject = `Your Digital Mess Card OTP: ${otp}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #f8fafc;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <span style="font-size: 36px;">🍽️</span>
+        <h2 style="color: #0f172a; margin: 8px 0 0 0; font-size: 20px;">A.P.J. Abdul Kalam Bhawan</h2>
+        <p style="color: #64748b; font-size: 12px; margin: 4px 0 0 0;">Digital Mess Card System</p>
+      </div>
+      <p style="color: #334155; font-size: 15px;">Hello,</p>
+      <p style="color: #334155; font-size: 15px;">Use the following One-Time Password (OTP) to log in to your mess card:</p>
+      <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: 8px; text-align: center; padding: 18px; border-radius: 12px; margin: 24px 0; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+        ${otp}
+      </div>
+      <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This OTP is valid for 10 minutes. Do not share this code with anyone.</p>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+      <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">A.P.J. Abdul Kalam Bhawan Mess &bull; Single-Token Anti-Waste Protection</p>
+    </div>
+  `;
 
   console.log(`\n======================================`);
   console.log(`[EMAIL OTP DISPATCH]`);
   console.log(`Recipient: ${toEmail}`);
   console.log(`OTP Code : >>> ${otp} <<<`);
-  console.log(`Status   : ${transporter ? 'Sending via SMTP (' + (process.env.SMTP_USER || 'active') + ')' : 'No SMTP configured'}`);
+  console.log(`Status   : ${transporter ? 'Sending via SMTP (' + (process.env.SMTP_USER || 'active') + ')' : 'Simulated (Dev Mode)'}`);
   console.log(`======================================\n`);
 
   if (transporter) {
     try {
       const info = await transporter.sendMail({
-        // Generic sender name — no university/institution keywords to avoid anti-impersonation flags
-        from: `"Kalam Mess Pass" <${process.env.SMTP_USER}>`,
+        from: `"Mess Digital Card" <${process.env.SMTP_USER}>`,
         to: toEmail,
-        // Static subject — no OTP digits in subject prevents security-scan delays
-        subject: 'Your Mess Pass Login Code',
-        // Plain text is primary — lightweight, no HTML scanning delays
-        text: `Your verification code is: ${otp}\n\nValid for 10 minutes. Do not share.\n\nOnce logged in, your pass stays saved on your phone.\n\nKalam Bhawan Mess`,
-        // Minimal HTML fallback — no gradients, no images, no complex CSS
-        html: `<div style="font-family:Arial,sans-serif;max-width:400px;margin:auto;padding:20px">
-<h3 style="color:#064e3b;margin:0 0 12px">Kalam Bhawan Mess</h3>
-<p style="color:#333;font-size:14px;margin:0 0 16px">Your verification code:</p>
-<div style="background:#059669;color:#fff;font-size:28px;font-weight:bold;letter-spacing:6px;text-align:center;padding:14px;border-radius:8px;margin:0 0 16px">${otp}</div>
-<p style="color:#666;font-size:12px;margin:0">Valid for 10 minutes. Once logged in, your pass stays saved on your phone.</p>
-</div>`,
-        // Priority headers for faster routing
-        priority: 'high',
-        headers: {
-          'X-Priority': '1',
-          'Importance': 'high'
-        }
+        subject,
+        html
       });
-
-      const elapsed = Date.now() - startTime;
       lastDispatchInfo = {
         timestamp: new Date().toISOString(),
         recipient: toEmail,
         success: true,
-        message: `Dispatched in ${elapsed}ms`,
+        message: 'Dispatched successfully',
         response: info.response,
         messageId: info.messageId
       };
-      console.log(`[SMTP SUCCESS] ${info.response} (${elapsed}ms)`);
-      return { sent: true, mode: 'smtp', response: info.response, elapsed };
+      console.log('[SMTP SUCCESS]:', info.response);
+      return { sent: true, mode: 'smtp', response: info.response };
     } catch (err) {
       console.error('[SMTP ERROR]:', err.message);
       lastDispatchInfo = {
@@ -102,40 +104,18 @@ async function sendOtpEmail(toEmail, otp) {
     }
   }
 
-  lastDispatchInfo = {
-    timestamp: new Date().toISOString(),
-    recipient: toEmail,
-    success: false,
-    message: 'SMTP credentials not configured in environment',
-    error: 'Missing SMTP_USER or SMTP_PASS'
-  };
-  return { sent: false, mode: 'unconfigured' };
+  return { sent: true, mode: 'simulated' };
 }
-
-let lastVerifyCache = {
-  result: null,
-  expiresAt: 0
-};
 
 async function testSmtpConnection() {
   if (!transporter) {
-    return { configured: false, message: 'SMTP credentials not configured in environment variables.' };
+    return { configured: false, message: 'SMTP credentials not configured.' };
   }
-
-  const now = Date.now();
-  if (lastVerifyCache.result && now < lastVerifyCache.expiresAt) {
-    return lastVerifyCache.result;
-  }
-
   try {
     await transporter.verify();
-    const result = { configured: true, ok: true, message: 'SMTP connection verified successfully!' };
-    lastVerifyCache = { result, expiresAt: now + 30000 };
-    return result;
+    return { configured: true, ok: true, message: 'SMTP connection verified successfully!' };
   } catch (err) {
-    const result = { configured: true, ok: false, error: err.message };
-    lastVerifyCache = { result, expiresAt: now + 10000 };
-    return result;
+    return { configured: true, ok: false, error: err.message };
   }
 }
 
