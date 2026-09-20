@@ -1,3 +1,5 @@
+const nodemailer = require('nodemailer');
+
 let transporter = null;
 
 function initTransporter() {
